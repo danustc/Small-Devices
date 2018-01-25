@@ -1,15 +1,15 @@
 import time
-import serial 
+import serial
 
 
 def pump_initial(serial_port):
     ser = serial.Serial(serial_port,19200,timeout=.1)
-    print 'connected to', ser.name
+    print('connected to', ser.name)
 
 def find_pumps(ser,tot_range=10):
     pumps = []
     for i in range(tot_range):
-        ser.write('%iADR\x0D'%i)
+        ser.write('%iADR\x0D'.encode()%i)
         output = ser.readline()
         if len(output)>0:
             pumps.append(i)
@@ -17,27 +17,28 @@ def find_pumps(ser,tot_range=10):
 
 def run_all(ser):
     cmd = '*RUN\x0D'
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from run_all not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from run_all not understood')
 
 def stop_all(ser):
-    cmd = '*STP\x0D'
+    cmd = '*STP\x0D'.encode()
     ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from stop_all not understood'
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.decode().strip()+' from stop_all not understood')
 
 def stop_pump(ser,pump):
     cmd = '%iSTP\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from stop_pump not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from stop_pump not understood')
 
     cmd = '%iRAT0UH\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from stop_pump not understood'
-    print cmd.strip()
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from stop_pump not understood')
+    print(cmd.strip())
+    print(output)
 
 def set_direct(ser,pump,dire):
     if dire==1:
@@ -45,20 +46,21 @@ def set_direct(ser,pump,dire):
     else:
         direction = 'WDR'
     frcmd = '%iDIR%s\x0D'%(pump,direction)
-    ser.write(frcmd)
-    output = ser.readline()
-    if '?' in output: print frcmd.strip()+' from set_rate not understood'
+    ser.write(frcmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(frcmd.strip()+' from set_rate not understood')
+    print("Direct:", output)
 
-def set_rate(ser, pump, flowrate): 
+def set_rate(ser, pump, flowrate):
     # set single rate 
     cmd = ''
     direction = 'INF'
-    if flowrate<0: 
+    if flowrate<0:
         direction = 'WDR'
     frcmd = '%iDIR%s\x0D'%(pump,direction)
-    ser.write(frcmd)
-    output = ser.readline()
-    if '?' in output: print frcmd.strip()+' from set_rate not understood'
+    ser.write(frcmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(frcmd.strip()+' from set_rate not understood')
     fr = abs(flowrate)
 
     if fr<5000:
@@ -68,12 +70,12 @@ def set_rate(ser, pump, flowrate):
         print(fr)
         cmd += str(pump)+'RAT'+str(fr)[:5]+'MH*'
     print('The rate is set at:')
-    print(cmd.strip())
+    print((cmd.strip()))
     print(cmd)
     cmd += '\x0D'
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from set_rates not understood'    
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from set_rates not understood')
 
 
 def set_rates(ser,rate):
@@ -81,14 +83,13 @@ def set_rates(ser,rate):
     for pump in rate:
         cmd = ''
         flowrate = float(rate[pump])
-        direction = 'INF'
-        if flowrate<0: direction = 'WDR'
-        frcmd = '%iDIR%s\x0D'%(pump,direction)
+        direction = 'INF'.encode()
+        if flowrate<0: direction = 'WDR'.encode()
+        frcmd = '%iDIR%s\x0D'.encode()%(pump,direction)
         ser.write(frcmd)
-        output = ser.readline()
-        if '?' in output: print frcmd.strip()+' from set_rate not understood'
+        output = ser.readline().decode()
+        if '?' in output: print(frcmd.decode().strip()+' from set_rate not understood')
         fr = abs(flowrate)
-                
         if fr<5000:
             cmd += str(pump)+'RAT'+str(fr)[:5]+'UH*'
         else:
@@ -96,25 +97,25 @@ def set_rates(ser,rate):
             print(fr)
             cmd += str(pump)+'RAT'+str(fr)[:5]+'MH*'
         print('The rate is set at:')
-        print(cmd.strip())
+        print((cmd.strip()))
         print(cmd)
         cmd += '\x0D'
-        ser.write(cmd)
-        output = ser.readline()
-        if '?' in output: print cmd.strip()+' from set_rates not understood'
+        ser.write(cmd.encode())
+        output = ser.readline().decode()
+        if '?' in output: print(cmd.decode().strip()+' from set_rates not understood')
 
 def get_rate(ser,pump):
     #get direction
     cmd = '%iDIR\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
     sign = ''
     if output[4:7]=='WDR':
         sign = '-'
     cmd = '%iRAT\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from get_rate not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from get_rate not understood')
     units = output[-3:-1]
     if units=='MH':
         rate = str(float(output[4:-3])*1000)
@@ -128,123 +129,122 @@ def get_rates(ser,pumps):
 
 def set_diameter(ser,pump,dia):
     cmd = '%iDIA%s\x0D'%(pump,dia)
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from set_diameter not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from set_diameter not understood')
 
     
 def get_diameter(ser,pump):
     cmd = '%iDIA\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from get_diameter not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from get_diameter not understood')
     dia = output[4:-1]
     return dia
 
 def prime(ser,pump):
     # set infuse direction
     cmd = '%iDIRINF\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from prime not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from prime not understood')
 
     # set rate
     cmd = '%iRAT10.0MH\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from prime not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from prime not understood')
 
     # run
     cmd = '%iRUN\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from prime not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from prime not understood')
 
 
 def run_pump(ser, pump):
-    cmd = '%iDIRWDR\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from prime not understood'
-    print("Direction set.")    
-    
-    cmd = '%iRAT20.0MH\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from setting rates not understood'    
-    print("Rate set.")
+    #cmd = '%iDIRINF\x0D'%pump # set the direction to infusion
+    #ser.write(cmd.encode())
+    #output = ser.readline().decode()
+    #if '?' in output: print(cmd.strip()+' from prime not understood')
+    #print("Direction set.")
+    #cmd = '%iRAT50.0MH\x0D'%pump
+    #ser.write(cmd.encode())
+    #output = ser.readline().decode()
+    #if '?' in output: print(cmd.strip()+' from setting rates not understood')    
+    #print("Rate set.")
     cmd = '%iRUN\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-   
-    if '?' in output: print cmd.strip()+' from run not understood'
-    print cmd.strip()
-    print("Running.")    
-    time.sleep(5)
-    
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from run not understood')
+    print(cmd.strip())
+    print("Running.")
+    #time.sleep(3)
     output=get_dis(ser,pump)
     print(output)
 
 
 
-def run_stop(ser, pump, w_seconds):
+def run_stop(ser, pump, w_seconds=1):
     cmd = '%iDIRINF\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from prime not understood'
-    print("Direction set.")    
-    
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from prime not understood')
+    print("Direction set.")
     cmd = '%iRAT10.0MH\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from setting rates not understood'    
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from setting rates not understood')    
     print("Rate set.")
-    
+
     cmd = '%iRUN\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-   
-    if '?' in output: print cmd.strip()+' from run not understood'
-    print cmd.strip()
-    print("Running.")    
-    time.sleep(w_seconds)  
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from run not understood')
+    print(cmd.strip())
+    print("Running.")
+    time.sleep(w_seconds)
 #    output = ser.readline()    
-        
     cmd = '%iSTP\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from stop_pump not understood'
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from stop_pump not understood')
     print("Stopped.")
     cmd = '%iRAT0UH\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from stop_pump not understood'
-    print cmd.strip()
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from stop_pump not understood')
+    print(cmd.strip())
 
 
-def set_vol(ser, pump, vol):
-    fvol=float(vol)
-    print fvol
+def set_vol(ser, pump, fvol):
+    print(fvol)
+    cmd_0 =  '%iVOLUL\x0D'%pump
     cmd = '%iVOL%s\x0D'%(pump,fvol)
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from set_vol not understood'
-    print cmd.strip()
-    
+    ser.write(cmd_0.encode())
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from set_vol not understood')
+    print(cmd.strip())
+    print("set_volume:", output)
+
 def get_dis(ser, pump):
     cmd = '%iDIS\x0D'%pump
-    ser.write(cmd)
-    output = ser.readline()
-    print(output)    
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    print(output)
     return output
-    
+
+
 def cld_dis(ser,pump):    # next:
     cmd = 'CLD\x0D'
-    ser.write(cmd)
-    output = ser.readline()
-    if '?' in output: print cmd.strip()+' from cld_dis not understood'
-    print 'Dispensed volume cleared.'
-    
+    ser.write(cmd.encode())
+    output = ser.readline().decode()
+    if '?' in output: print(cmd.strip()+' from cld_dis not understood')
+    print('Dispensed volume cleared.')
+
+
+
     #ser = serial.Serial('COM3',19200)
 #print ser.name       # check which port was really used
 #print ser.isOpen()
