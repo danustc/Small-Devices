@@ -58,11 +58,9 @@ class PumpControl(QtWidgets.QWidget):
         grid.addWidget(QtWidgets.QLabel('Volume to deliver'), 2,4)   
         grid.addWidget(QtWidgets.QLabel('Habituation'), 2,5)   
         grid.addWidget(QtWidgets.QLabel('Current flow rate'),2,6)
-          
-        
-        
         # find pumps
         pumps = new_era.find_pumps(self.ser)
+        print("Find pumps:", pumps)
         
         # interate over pumps, adding a row for each
         self.mapper = QtCore.QSignalMapper(self)

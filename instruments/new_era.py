@@ -32,12 +32,6 @@ def stop_pump(ser,pump):
     ser.write(cmd.encode())
     output = ser.readline().decode()
     if '?' in output: print(cmd.strip()+' from stop_pump not understood')
-
-    cmd = '%iRAT0UH\x0D'%pump
-    ser.write(cmd.encode())
-    output = ser.readline().decode()
-    if '?' in output: print(cmd.strip()+' from stop_pump not understood')
-    print(cmd.strip())
     print(output)
 
 def set_direct(ser,pump,dire):
@@ -222,6 +216,7 @@ def set_vol(ser, pump, fvol):
     cmd_0 =  '%iVOLUL\x0D'%pump
     cmd = '%iVOL%s\x0D'%(pump,fvol)
     ser.write(cmd_0.encode())
+    output = ser.readline().decode()
     ser.write(cmd.encode())
     output = ser.readline().decode()
     if '?' in output: print(cmd.strip()+' from set_vol not understood')
