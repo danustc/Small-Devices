@@ -4,7 +4,9 @@ import serial
 from PyQt5 import QtGui, QtWidgets, QtCore
 import pump_design
 import new_era
+import time
 from functools import partial
+from collections import deque
 from threading import Timer, Thread, Event
 
 serial_port = "/dev/ttyUSB0"
@@ -37,6 +39,7 @@ class pump_ui(object):
 
         # set the default value
         self.set_default()
+        self.n_steps = 0
 
         # Following are the definition of button and lineEdit functions
         self._ui.pushButton_godefault.clicked.connect(self.go_default)
@@ -47,7 +50,9 @@ class pump_ui(object):
         self._ui.lineEdit_rate.returnPressed.connect(partial(self.set_rate))
         self._ui.lineEdit_volume.returnPressed.connect(partial(self.set_vol))
         # ------------------Done with definition of buton and lineEdit functions
-        self.protocol_thread = None
+        self.protocol_threads = deque()
+        self.protocol_list = []
+        self.isrunning = False
 
         self._window.show()
         self._app.exec_()
@@ -74,7 +79,7 @@ class pump_ui(object):
             self.default_dir = direct
 
     def run_pump(self):
-        new_era.run_pump(self.ser,self.pump)
+        return new_era.run_pump(self.ser,self.pump)
 
 
     def set_vol(self, vol = None):
@@ -112,12 +117,27 @@ class pump_ui(object):
         self._ui.tableWidget_steps.setItem(row_position, 1, item_rate)
 
         item_vol= QtWidgets.QTableWidgetItem()
-        vol_string= self._ui.lineEdit_vol.text()
+        vol_string= self._ui.lineEdit_volume.text()
         item_vol.setText(vol_string)
         self._ui.tableWidget_steps.setItem(row_position, 2, item_vol)
+        # add a step
 
-    def delete_step(self):
-        pass
+        step_parameters = [float(time_string), int(rate_string), float(vol_string)]
+        self.protocol_list.append(step_parameters)
+        self.n_steps +=1
+
+
+    def delete_step(self, d_step = None):
+        if d_step is None:
+            self.protocol_list.pop()
+            d_step = -1
+        elif d_step == 0:
+            self.protocol_list.popleft()
+        else:
+            del self.protocol_list[d_step]
+
+        self.n_steps -=1
+        self._ui.tableWidget_steps.removeRow(dstep)
 
     def clear_protocol(self):
         pass
@@ -127,7 +147,8 @@ class pump_ui(object):
         new_era.stop_pump(self.ser, self.pump)
 
     def shutDown(self, event):
-        self.stop_pump()
+        if self.isrunning:
+            self.stop_pump()
         self.ser.close()
         self._app.quit()
 
@@ -135,8 +156,30 @@ class pump_ui(object):
         '''
         This needs a thread
         '''
-        self.protocol_thread = Protocol_thread(new_era)
-        self.protocol_thread.start()
+        tinit = 0.
+        row_position = 0
+        for step_paras in self.protocol_list:
+            print(row_position)
+            time_running = step_paras[0]-tinit
+            tinit = step_paras[0]
+            rate_running = step_paras[1]
+            vol_running = step_paras[2]
+            step_flag = Event()
+            tmr = Protocol_thread(new_era, step_flag)
+            tmr.set_dt(time_running)
+            tmr.start()
+            while not tmr.finished():
+                continue
+            self.set_rate(rate_running)
+            self.set_vol(vol_running)
+            self.run_pump()
+            item_status = QtWidgets.QTableWidgetItem()
+            item_status.setText("executed")
+            self._ui.tableWidget_steps.setItem(row_position, 3, item_status)
+            row_position +=1
+
+        print("Protocol finished.")
+
 #--------------------------------------This is the timer threading ----------------------------------
 class Protocol_thread(Thread):
     '''
@@ -147,15 +190,17 @@ class Protocol_thread(Thread):
         self.ne = control  # load new_era
         self.stopped = event
 
-    def run(self):
-        tinit = 0.
-        for tlapse, nvol in protocol:
-            dt = tlapse - tinit
-            while not self.stopped.wait(dt):
-                # call the function of 
-                pass
-            tinit = tlapse # update the tinit
+    def set_dt(self, dt):
+        self.dt = dt
 
+    def run(self):
+        self.stopped.wait(self.dt)
+        self.stopped.set()
+        print(time.ctime())
+
+    def finished(self):
+        return self.stopped.is_set()
+                # call the function of 
 
 
 
