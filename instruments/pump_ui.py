@@ -5,6 +5,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 import pump_design
 import new_era
 import time
+import numpy as np
 from functools import partial
 from collections import deque
 from threading import Timer, Thread, Event
@@ -46,12 +47,15 @@ class pump_ui(object):
         self._ui.pushButton_run.clicked.connect(self.run_pump)
         self._ui.pushButton_stop.clicked.connect(self.stop_pump)
         self._ui.pushButton_adds.clicked.connect(self.add_step)
+        self._ui.pushButton_dels.clicked.connect(partial(self.delete_step))
+        self._ui.pushButton_savepro.clicked.connect(self.save_protocol)
+        self._ui.pushButton_loadpro.clicked.connect(self.load_protocol)
         self._ui.pushButton_runpro.clicked.connect(self.run_protocol)
         self._ui.lineEdit_rate.returnPressed.connect(partial(self.set_rate))
         self._ui.lineEdit_volume.returnPressed.connect(partial(self.set_vol))
         # ------------------Done with definition of buton and lineEdit functions
         self.protocol_threads = deque()
-        self.protocol_list = []
+        self.protocol_list = deque()
         self.isrunning = False
 
         self._window.show()
@@ -95,12 +99,13 @@ class pump_ui(object):
         new_era.set_rate(self.ser, self.pump, self.rate)
         self._ui.lcdNumber_current.display(self.rate)
 
-    def load_protocol(self, protocol):
+    def load_protocol(self):
         '''
         protocol: two-column arrays, the first colume specifies the time at which the volumes are delivered, and the second
         '''
-        self.time_stamps = protocol[:,0]
-        self.deliveries = protocol[:,1]
+        fname, _ =QtWidgets.QFileDialog.getOpenFileName(None,'Protocol to load:')
+        print(fname)
+
 
     def add_step(self):
         row_position = self._ui.tableWidget_steps.rowCount()
@@ -122,25 +127,38 @@ class pump_ui(object):
         self._ui.tableWidget_steps.setItem(row_position, 2, item_vol)
         # add a step
 
+        item_check = QtWidgets.QTableWidgetItem()
+        item_check.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+        item_check.setCheckState(QtCore.Qt.Unchecked)
+        self._ui.tableWidget_steps.setItem(row_position, 4, item_check)
         step_parameters = [float(time_string), int(rate_string), float(vol_string)]
         self.protocol_list.append(step_parameters)
         self.n_steps +=1
 
 
     def delete_step(self, d_step = None):
-        if d_step is None:
-            self.protocol_list.pop()
-            d_step = -1
-        elif d_step == 0:
-            self.protocol_list.popleft()
-        else:
-            del self.protocol_list[d_step]
+        if self.n_steps:
+            if d_step is None:
+                self.protocol_list.pop()
+                d_step = -1
+            elif d_step == 0:
+                self.protocol_list.popleft()
+            else:
+                del self.protocol_list[d_step]
 
-        self.n_steps -=1
-        self._ui.tableWidget_steps.removeRow(dstep)
+            self.n_steps -=1
+            self._ui.tableWidget_steps.removeRow(d_step)
+        else:
+            print("The protocol list is empty.")
 
     def clear_protocol(self):
         pass
+
+    def save_protocol(self):
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(None,'Save Protocol')
+        print(fname)
+        protocol_array = np.array(self.protocol_list)
+        np.savetxt(fname, protocol_array, fmt = '%d')
 
 
     def stop_pump(self):
