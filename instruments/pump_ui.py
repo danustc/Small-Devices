@@ -11,6 +11,7 @@ from collections import deque
 from threading import Timer, Thread, Event
 
 serial_port = "/dev/ttyUSB0"
+serial_port_win = "COM"
 syringes = {' 1 ml BD':'4.699',
             ' 3 ml BD':'8.585',
             ' 5 ml BD':'11.99',
