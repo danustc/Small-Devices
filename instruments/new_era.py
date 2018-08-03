@@ -134,7 +134,6 @@ def set_diameter(ser,pump,dia):
     output = ser.readline().decode()
     if '?' in output: print(cmd.strip()+' from set_diameter not understood')
 
-    
 def get_diameter(ser,pump):
     cmd = '%iDIA\x0D'%pump
     ser.write(cmd.encode())

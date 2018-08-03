@@ -29,7 +29,7 @@ class pump_ui(object):
             self.pump = pumps[0]
         except OSError:
             print('Cannot find the port.')
-            sys.exit(1)
+            #sys.exit(1)
 
         self._app = QtWidgets.QApplication(sys.argv)
         self._window = QtWidgets.QWidget()
@@ -46,11 +46,12 @@ class pump_ui(object):
         self._ui.pushButton_godefault.clicked.connect(self.go_default)
         self._ui.pushButton_run.clicked.connect(self.run_pump)
         self._ui.pushButton_stop.clicked.connect(self.stop_pump)
-        self._ui.pushButton_adds.clicked.connect(self.add_step)
-        self._ui.pushButton_dels.clicked.connect(partial(self.delete_step))
+        self._ui.pushButton_adds.clicked.connect(partial(self.add_step, None, None, None))
+        self._ui.pushButton_dels.clicked.connect(self.delete_steps)
         self._ui.pushButton_savepro.clicked.connect(self.save_protocol)
         self._ui.pushButton_loadpro.clicked.connect(self.load_protocol)
         self._ui.pushButton_runpro.clicked.connect(self.run_protocol)
+        self._ui.pushButton_clearpro.clicked.connect(self.clear_protocol)
         self._ui.lineEdit_rate.returnPressed.connect(partial(self.set_rate))
         self._ui.lineEdit_volume.returnPressed.connect(partial(self.set_vol))
         # ------------------Done with definition of buton and lineEdit functions
@@ -67,6 +68,8 @@ class pump_ui(object):
         self.set_rate(self.default_rate)
 
     def set_default(self, rate = None, vol = None, direct = None):
+        dia = new_era.get_diameter(self.ser,self.pump)
+        print(dia)
         if rate is None:
             rate = int(self._ui.lineEdit_rate.text())
         self.default_rate = rate
@@ -105,24 +108,39 @@ class pump_ui(object):
         '''
         fname, _ =QtWidgets.QFileDialog.getOpenFileName(None,'Protocol to load:')
         print(fname)
+        protocol_paras = np.loadtxt(fname)
+        for paras in protocol_paras:
+            self.add_step(paras[0], int(paras[1]),paras[2] )
 
-
-    def add_step(self):
+    def add_step(self, time = None, rate = None, vol = None ):
         row_position = self._ui.tableWidget_steps.rowCount()
         self._ui.tableWidget_steps.insertRow(row_position)
         # set items in the table
         item_time = QtWidgets.QTableWidgetItem()
-        time_string = self._ui.lineEdit_deltime.text()
+        if time is None:
+            time_string = self._ui.lineEdit_deltime.text()
+            print(time_string)
+            time = float(time_string)
+        else:
+            time_string = str(time)
         item_time.setText(time_string)
         self._ui.tableWidget_steps.setItem(row_position, 0, item_time)
 
         item_rate= QtWidgets.QTableWidgetItem()
-        rate_string = self._ui.lineEdit_rate.text()
+        if rate is None:
+            rate_string = self._ui.lineEdit_rate.text()
+            rate = int(rate_string)
+        else:
+            rate_string = str(rate)
         item_rate.setText(rate_string)
         self._ui.tableWidget_steps.setItem(row_position, 1, item_rate)
 
         item_vol= QtWidgets.QTableWidgetItem()
-        vol_string= self._ui.lineEdit_volume.text()
+        if vol is None:
+            vol_string= self._ui.lineEdit_volume.text()
+            vol = float(vol_string)
+        else:
+            vol_string = str(vol)
         item_vol.setText(vol_string)
         self._ui.tableWidget_steps.setItem(row_position, 2, item_vol)
         # add a step
@@ -131,28 +149,29 @@ class pump_ui(object):
         item_check.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
         item_check.setCheckState(QtCore.Qt.Unchecked)
         self._ui.tableWidget_steps.setItem(row_position, 4, item_check)
-        step_parameters = [float(time_string), int(rate_string), float(vol_string)]
+        step_parameters = [time, rate, vol]
         self.protocol_list.append(step_parameters)
         self.n_steps +=1
 
 
-    def delete_step(self, d_step = None):
+    def delete_steps(self):
         if self.n_steps:
-            if d_step is None:
-                self.protocol_list.pop()
-                d_step = -1
-            elif d_step == 0:
-                self.protocol_list.popleft()
-            else:
-                del self.protocol_list[d_step]
-
-            self.n_steps -=1
-            self._ui.tableWidget_steps.removeRow(d_step)
+            a = self.n_steps
+            dt = 0
+            for ii in range(a):
+                if(self._ui.tableWidget_steps.item(ii-dt, 4).checkState()):
+                    del self.protocol_list[ii-dt]
+                    self._ui.tableWidget_steps.removeRow(ii-dt)
+                    self.n_steps -=1
+                    dt+=1
         else:
             print("The protocol list is empty.")
 
     def clear_protocol(self):
-        pass
+        self.protocol_list=deque()
+        self.n_steps = 0
+        self._ui.tableWidget_steps.setRowCount(0)
+
 
     def save_protocol(self):
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(None,'Save Protocol')
